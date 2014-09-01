@@ -1,11 +1,13 @@
 #include <Adafruit_NeoPixel.h>
+
 #include <SD.h>
 //Git Checkin
 
 const int DATAPIN = 6;
-const int LEDCOUNT = 470;
+
+//214 going into file
+ int LEDCOUNT = 470;
 const int BUTTON_PIN = 8;
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATAPIN, NEO_GRB + NEO_KHZ400);
 
 //SD Card Control
 File myFile;
@@ -21,46 +23,68 @@ SdFile root;
 void setup()
 {
   Serial.begin(115200);
-  strip.begin();
+  Serial.println("***Starting***");
+  
+
   
   InitializePins();
   DiplayCardInfo();
   InitializeSD();
   
+  delay(1000);
 }
 
 void loop()
 {
   PlayDataToVest(5);
+  //strip.setPixelColor(0,0xff00ff);
+  //strip.show();
   
+  //Serial.println(millis());
+  //delay(1000);
 }
 
 void PlayDataToVest(int wait)
 {
-  int frames = 0;
-  long startTime = millis();
-  OpenFile();
+  SetLedCount();
+  Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATAPIN, NEO_GRB + NEO_KHZ800);
+  strip.begin();
+  strip.show();
   
-  while(myFile.available() && !newProgram) //untill there is no more data
+  while(true)
   {
-    CheckButtonPress();
+    OpenFile();
     
-    for(int i = 0; i<LEDCOUNT; i++)//itterate each led
+    while(myFile.available() && !newProgram) //untill there is no more data
     {
-      strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
+      CheckButtonPress();
+      
+      for(int i = 0; i<LEDCOUNT; i++)//itterate each led
+      {
+        strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
+      }
+      //Serial.println(strip.getPixelColor(0));
+      strip.show();
+      FlashLed();
+      delay(wait);
+
     }
     
-    strip.show();
-    FlashLed();
-    delay(wait);
-    frames++;
+    myFile.close();
   }
-  
-  myFile.close();
-  Serial.println( frames );
-  Serial.println( millis() - startTime);
 }
 
+void SetLedCount()
+    {
+      //the first two bytes in the file construct an int of the count of LEDS
+      myFile = SD.open("01.led");
+      LEDCOUNT = myFile.read();//msb
+      LEDCOUNT<<=8;
+      LEDCOUNT |= myFile.read();//lsb
+      Serial.print("LEDCOUNT = "); Serial.println(LEDCOUNT); 
+      myFile.close();
+    }
+    
 void OpenFile()
 {
   switch(fileToPlay)
