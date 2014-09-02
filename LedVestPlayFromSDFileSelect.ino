@@ -58,8 +58,11 @@ void PlayDataToVest(int wait)
 
   int frames = 0;
   long startTime = millis();
-  OpenFile();
   
+  //dispose of the header (first two bytes) 
+  OpenFile();
+  myFile.read();
+  myFile.read();
   while(myFile.available() && !newProgram) //untill there is no more data
   {
     CheckButtonPress();
