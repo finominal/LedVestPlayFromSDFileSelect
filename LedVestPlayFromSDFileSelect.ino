@@ -1,9 +1,11 @@
 
-#include <Adafruit_NeoPixel.h>
+//#include <Adafruit_NeoPixel.h>
+#include "FastLED.h"
+
 #include <SD.h>
 //Git Checkin
 
-const int DATAPIN = 6;
+const int DATA_PIN = 6;
 uint16_t  LEDCOUNT = 0;
 const int BUTTON_PIN = 8;
 
@@ -17,6 +19,8 @@ boolean newProgram = false;
 Sd2Card card;
 SdVolume volume;
 SdFile root;
+
+
 
 void setup()
 {
@@ -49,38 +53,43 @@ void GetLedCount()
 
 void PlayDataToVest(int wait)
 {
+  CRGB leds[LEDCOUNT];
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, LEDCOUNT);
   
-  Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATAPIN, NEO_GRB + NEO_KHZ400);
-  strip.begin();
+  //Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATAPIN, NEO_GRB + NEO_KHZ400);
+  ///strip.begin();
   
   while(true)
   {
 
-  int frames = 0;
+  //int frames = 0;
   long startTime = millis();
   
   //dispose of the header (first two bytes) 
   OpenFile();
   myFile.read();
   myFile.read();
+  
   while(myFile.available() && !newProgram) //untill there is no more data
   {
     CheckButtonPress();
     
     for(int i = 0; i<LEDCOUNT; i++)//itterate each led
     {
-      strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
-    }
+     // strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
+      leds[i] = GetOneLedDataFromFile(myFile);
+  }
     
-    strip.show();
+    //strip.show();
+    FastLED.show();
     FlashLed();
     delay(wait);
-    frames++;
+    //frames++;
   }
   
   myFile.close();
-  Serial.println( frames );
-  Serial.println( millis() - startTime);
+  //Serial.println( frames );
+  //Serial.println( millis() - startTime);
   }
 }
 
