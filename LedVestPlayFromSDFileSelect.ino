@@ -1,9 +1,8 @@
 
 //#include <Adafruit_NeoPixel.h>
 #include "FastLED.h"
-
 #include <SD.h>
-//Git Checkin
+
 
 const int DATA_PIN = 6;
 uint16_t  LEDCOUNT = 0;
@@ -24,7 +23,10 @@ SdFile root;
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
+  delay(2000);
+  Serial.println("*Starting*");
+  delay(1000);
   
   InitializePins();
   DiplayCardInfo();
@@ -56,14 +58,14 @@ void PlayDataToVest(int wait)
   CRGB leds[LEDCOUNT];
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, LEDCOUNT);
   
-  //Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATAPIN, NEO_GRB + NEO_KHZ400);
-  ///strip.begin();
+  //Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATA_PIN, NEO_GRB + NEO_KHZ400);
+  //strip.begin();
   
   while(true)
   {
 
-  //int frames = 0;
-  long startTime = millis();
+  long startTime = millis(); //used to set frame rate wait times
+  long loopTime;
   
   //dispose of the header (first two bytes) 
   OpenFile();
@@ -74,17 +76,22 @@ void PlayDataToVest(int wait)
   {
     CheckButtonPress();
     
+    
     for(int i = 0; i<LEDCOUNT; i++)//itterate each led
     {
-     // strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
+    //  strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
       leds[i] = GetOneLedDataFromFile(myFile);
   }
     
     //strip.show();
     FastLED.show();
     FlashLed();
-    delay(wait);
-    //frames++;
+    
+    loopTime = (millis() - startTime);
+    if(loopTime < 40)
+    {
+      delay(40 - loopTime); //40 ms in 25 fps
+    }
   }
   
   myFile.close();
@@ -179,7 +186,7 @@ void DiplayCardInfo()
 
   // we'll use the initialization code from the utility libraries
   // since we're just testing if the card is working!
-  if (!card.init(SPI_HALF_SPEED, chipSelect)) {
+  if (!card.init(SPI_QUARTER_SPEED, chipSelect)) {
     Serial.println("initialization failed. Things to check:");
     Serial.println("* is a card is inserted?");
     Serial.println("* Is your wiring correct?");
@@ -243,7 +250,7 @@ void DiplayCardInfo()
 
 void InitializePins()
 {
-  pinMode(53, OUTPUT);  //to talk to the SD card, 10 on UNO, 53 on mega
+  pinMode(20, OUTPUT);  //to talk to the SD card, 10 on UNO, 53 on mega
   
   //led light indicator
   pinMode(13, OUTPUT);
