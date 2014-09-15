@@ -3,6 +3,7 @@
 #include "FastLED.h"
 #include <SD.h>
 
+//File entry =  dir.openNextFile();
 
 const int DATA_PIN = 6;
 uint16_t  LEDCOUNT = 0;
@@ -10,7 +11,7 @@ const int BUTTON_PIN = 8;
 
 //SD Card Control
 File myFile;
-const int chipSelect = 20;
+const int chipSelect = 10;
 int fileToPlay = 1;
 boolean newProgram = false;
 
@@ -23,11 +24,9 @@ SdFile root;
 
 void setup()
 {
-  Serial.begin(9600);
-  delay(2000);
+  Serial.begin(115200);
   Serial.println("*Starting*");
-  delay(1000);
-  
+
   InitializePins();
   DiplayCardInfo();
   InitializeSD();
@@ -88,15 +87,15 @@ void PlayDataToVest(int wait)
     FlashLed();
     
     loopTime = (millis() - startTime);
+    //Serial.println(loopTime); //show the loop time in ms
     if(loopTime < 40)
     {
       delay(40 - loopTime); //40 ms in 25 fps
     }
+    startTime = millis();
   }
   
   myFile.close();
-  //Serial.println( frames );
-  //Serial.println( millis() - startTime);
   }
 }
 
@@ -106,7 +105,7 @@ void OpenFile()
   {
   case 1:
     myFile = SD.open("01.led");
-    Serial.println("Playing file 01");
+    Serial.println("Playing file 01"); 
     break;
   case 2:
     myFile = SD.open("02.led");
@@ -183,9 +182,8 @@ uint32_t GetOneLedDataFromFile(File file)//gets 24 bits, return as 32
 
 void DiplayCardInfo()
 {
-
-  // we'll use the initialization code from the utility libraries
-  // since we're just testing if the card is working!
+  //half speed didnt work so well with teensy 3.1
+  //might be able to get the frame rate up higher on Arduino on Full Speed?
   if (!card.init(SPI_QUARTER_SPEED, chipSelect)) {
     Serial.println("initialization failed. Things to check:");
     Serial.println("* is a card is inserted?");
