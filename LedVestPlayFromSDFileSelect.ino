@@ -33,8 +33,8 @@ void setup()
   InitializePins();
   //DiplayCardInfo();
   InitializeSD();
+  GetNextFile();//get the first file
   GetLedCount();
-  GetNextFile();
 }
 
 void loop()
@@ -45,15 +45,13 @@ void loop()
 
 void GetLedCount()
 {
-  myFile = SD.open("01.led");
   LEDCOUNT = myFile.read();
   LEDCOUNT<<=8;
   LEDCOUNT |= myFile.read();
   //LEDCOUNT = count;
-  myFile.close();
   if(LEDCOUNT >2000) LEDCOUNT = 2000;
   Serial.print("LED COUNT = "); Serial.println(LEDCOUNT);
-  
+  myFile.seek(0); //redet the file to start.
 }
 
 void PlayDataToVest()
