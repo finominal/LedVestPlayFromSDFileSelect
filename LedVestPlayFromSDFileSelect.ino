@@ -14,7 +14,6 @@ File myFile;
 File cardRoot;
 
 const int chipSelect = 20;
-int fileToPlay = 1;
 boolean newProgram = false;
 
 //SD Card Info
@@ -26,30 +25,26 @@ SdFile root;
 
 void setup()
 {
-  delay(3000);
+  delay(3000); //dev catch startup info 
   Serial.begin(9600);
   Serial.println("*Starting*");
 
   InitializePins();
-  //DiplayCardInfo();
-  InitializeSD();
-  GetNextFile();//get the first file
-  GetLedCount();
+  InitializeSD(); // will also display card info
+  GetNextFile();  // get the first file
+  GetLedCount(); //get the led count from the file header, two bytes combined.
 }
 
 void loop()
 {
   PlayDataToVest();
-  
 }
 
 void GetLedCount()
 {
   LEDCOUNT = myFile.read();
   LEDCOUNT<<=8;
-  LEDCOUNT |= myFile.read();
-  //LEDCOUNT = count;
-  if(LEDCOUNT >2000) LEDCOUNT = 2000;
+  LEDCOUNT |= myFile.read(); 
   Serial.print("LED COUNT = "); Serial.println(LEDCOUNT);
   myFile.seek(0); //redet the file to start.
 }
@@ -90,7 +85,6 @@ void PlayDataToVest()
     
     //strip.show();
     FastLED.show();
-    FlashLed();
     
     loopTime = (millis() - startTime);
     //Serial.println(loopTime); //show the loop time in ms
@@ -110,69 +104,12 @@ void GetNextFile()
   myFile =  cardRoot.openNextFile();
   if (!myFile) 
   {
-    Serial.println("EndOfDirectory");
     cardRoot.rewindDirectory();
     myFile =  cardRoot.openNextFile();
   }
    Serial.print("Opened File:");Serial.println(myFile.name());
 }
-/*
-void OpenFile()
-{
-  switch(fileToPlay)
-  {
-  case 1:
-    myFile = SD.open("01.led");
-    Serial.println("Playing file 01"); 
-    break;
-  case 2:
-    myFile = SD.open("02.led");
-    Serial.println("Playing file 02");
-    break;
-  case 3:
-    myFile = SD.open("03.led");
-    Serial.println("Playing file 03");
-    break;  
-  case 4:
-    myFile = SD.open("04.led");
-    Serial.println("Playing file 04");
-    break;
-  case 5:
-    myFile = SD.open("05.led");
-    Serial.println("Playing file 05");
-    break;
-  case 6:
-    myFile = SD.open("06.led");
-    Serial.println("Playing file 06");
-    break;
-  case 7:
-    myFile = SD.open("07.led");
-    Serial.println("Playing file 07");
-    break;
-  case 8:
-    myFile = SD.open("08.led");
-    Serial.println("Playing file 08");
-    break;
-  case 9:
-    myFile = SD.open("09.led");
-    Serial.println("Playing file 09");
-    break;
-  case 10:
-    myFile = SD.open("10.led");
-    Serial.println("Playing file 10");
-    break;
-      case 11:
-    myFile = SD.open("11.led");
-    Serial.println("Playing file 11");
-    break;
-      case 12:
-    myFile = SD.open("12.led");
-    Serial.println("Playing file 12");
-    break;
-  }
-  newProgram = false;//we have a new program loaded now
-}
-*/
+
 
 void InitializeSD()
 {
@@ -188,7 +125,6 @@ void InitializeSD()
   
   cardRoot = SD.open("/");
   
-  //printDirectory(cardRoot, 0);
   DiplayCardInfo();
  
   Serial.println("done!");
@@ -204,7 +140,6 @@ uint32_t GetOneLedDataFromFile(File file)//gets 24 bits, return as 32
   result |= file.read();//lsb
   return result;
 }
-
 
 void printDirectory(File dir, int numTabs) {
    int l = 0;
@@ -303,19 +238,8 @@ void InitializePins()
 {
   pinMode(20, OUTPUT);  //to talk to the SD card, 10 on UNO, 53 on mega
   
-  //led light indicator
-  pinMode(13, OUTPUT);
-  digitalWrite(13, LOW);
-  
-    pinMode(BUTTON_PIN, INPUT); //button
+  pinMode(BUTTON_PIN, INPUT); //button
   digitalWrite(BUTTON_PIN, HIGH);
-}
-
-void FlashLed()
-{
-      digitalWrite(13, HIGH);
-      delay(1);
-      digitalWrite(13, LOW);
 }
 
 void CheckButtonPress()
