@@ -11,7 +11,9 @@ const int BUTTON_PIN = 8;
 
 //SD Card Control
 File myFile;
-const int chipSelect = 10;
+File cardRoot;
+
+const int chipSelect = 20;
 int fileToPlay = 1;
 boolean newProgram = false;
 
@@ -24,18 +26,20 @@ SdFile root;
 
 void setup()
 {
-  Serial.begin(115200);
+  delay(3000);
+  Serial.begin(9600);
   Serial.println("*Starting*");
 
   InitializePins();
-  DiplayCardInfo();
+  //DiplayCardInfo();
   InitializeSD();
   GetLedCount();
+  GetNextFile();
 }
 
 void loop()
 {
-  PlayDataToVest(5);
+  PlayDataToVest();
   
 }
 
@@ -52,7 +56,7 @@ void GetLedCount()
   
 }
 
-void PlayDataToVest(int wait)
+void PlayDataToVest()
 {
   CRGB leds[LEDCOUNT];
   FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, LEDCOUNT);
@@ -60,22 +64,26 @@ void PlayDataToVest(int wait)
   //Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATA_PIN, NEO_GRB + NEO_KHZ400);
   //strip.begin();
   
-  while(true)
+  while(true)//replaces loop so led array size can be sized dynamically from file
   {
-
+    if(newProgram)
+    {
+      GetNextFile();
+      newProgram = !newProgram;
+    }
+    
   long startTime = millis(); //used to set frame rate wait times
   long loopTime;
   
   //dispose of the header (first two bytes) 
-  OpenFile();
+  Serial.print("Playing File: "); Serial.println(myFile.name()); 
   myFile.read();
   myFile.read();
   
   while(myFile.available() && !newProgram) //untill there is no more data
   {
     CheckButtonPress();
-    
-    
+
     for(int i = 0; i<LEDCOUNT; i++)//itterate each led
     {
     //  strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
@@ -95,10 +103,22 @@ void PlayDataToVest(int wait)
     startTime = millis();
   }
   
-  myFile.close();
+  myFile.seek(0); //reset the file
   }
 }
 
+void GetNextFile()
+{ 
+  myFile =  cardRoot.openNextFile();
+  if (!myFile) 
+  {
+    Serial.println("EndOfDirectory");
+    cardRoot.rewindDirectory();
+    myFile =  cardRoot.openNextFile();
+  }
+   Serial.print("Opened File:");Serial.println(myFile.name());
+}
+/*
 void OpenFile()
 {
   switch(fileToPlay)
@@ -154,7 +174,7 @@ void OpenFile()
   }
   newProgram = false;//we have a new program loaded now
 }
-
+*/
 
 void InitializeSD()
 {
@@ -167,6 +187,13 @@ void InitializeSD()
   }
   
   Serial.println("SD Initialization OK.");
+  
+  cardRoot = SD.open("/");
+  
+  //printDirectory(cardRoot, 0);
+  DiplayCardInfo();
+ 
+  Serial.println("done!");
 }
 
 uint32_t GetOneLedDataFromFile(File file)//gets 24 bits, return as 32
@@ -178,6 +205,34 @@ uint32_t GetOneLedDataFromFile(File file)//gets 24 bits, return as 32
   result<<=8;
   result |= file.read();//lsb
   return result;
+}
+
+
+void printDirectory(File dir, int numTabs) {
+   int l = 0;
+  while(true)
+  {
+     myFile =  dir.openNextFile();
+     if (! myFile) {
+       // no more files
+       Serial.println("**nomorefiles**");
+       l=1;
+       break;
+     }
+     for (uint8_t i=0; i<numTabs; i++) {
+       Serial.print('\t');
+     }
+     Serial.print(myFile.name());
+     if (myFile.isDirectory()) {
+       Serial.println("/");
+       printDirectory(myFile, numTabs+1);
+     } else {
+       // files have sizes, directories do not
+       Serial.print("\t\t");
+       Serial.println(myFile.size(), DEC);
+     }
+     myFile.close();
+  }
 }
 
 void DiplayCardInfo()
@@ -273,14 +328,7 @@ void CheckButtonPress()
     if(digitalRead(BUTTON_PIN) == LOW)
     {
       newProgram = true;
-      if(fileToPlay == 12)
-      { 
-         fileToPlay = 1; 
-      }
-      else 
-      {
-        fileToPlay++;
-      }
+      
       while(digitalRead(BUTTON_PIN) == LOW) {;}//wait for let go of button
     }
   }
