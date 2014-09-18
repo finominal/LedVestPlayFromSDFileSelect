@@ -121,7 +121,7 @@ void GetNextFile()
     myFile =  cardRoot.openNextFile();
     currentProgram=0;
   }
-    currentProgram++; //keep track of the program to send to other controllers. 
+   currentProgram++; //keep track of the program to send to other controllers. 
   
    Serial.print("Opened File:");Serial.println(myFile.name());
    Serial1.print(currentProgram);//send the programChange to the other controllers. 
@@ -150,7 +150,7 @@ void InitializeSD()
     return;
   }
   
-  Serial.println("SD Initialization OK.");
+  Serial.println("SD Initialization Started.");
   
   cardRoot = SD.open("/");
   
@@ -160,8 +160,7 @@ void InitializeSD()
   cardRoot.rewindDirectory();
   while(true)
   {
-     
-      myFile =  cardRoot.openNextFile();
+     myFile =  cardRoot.openNextFile();
      if (! myFile) 
      {
        cardRoot.rewindDirectory();
@@ -172,10 +171,9 @@ void InitializeSD()
      {
        countFiles++;
      }
-     
   }
  
-  Serial.println("done!");
+  Serial.println("SD INITILIAZED OK);
 }
 
 uint32_t GetOneLedDataFromFile(File file)//gets 24 bits, return as 32
@@ -320,7 +318,7 @@ void CheckForSerialProgram()
     if(recieved > 0 && recieved <= countFiles)
     {
       requestedProgram = recieved;
-      Serial1.println(requestedProgram);//send on 
+      Serial1.print(requestedProgram);//send on 
       newProgram = true;
     }
   }
