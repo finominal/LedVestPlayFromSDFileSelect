@@ -173,7 +173,7 @@ void InitializeSD()
      }
   }
  
-  Serial.println("SD INITILIAZED OK);
+  Serial.println("SD INITILIAZED OK");
 }
 
 uint32_t GetOneLedDataFromFile(File file)//gets 24 bits, return as 32
@@ -305,12 +305,12 @@ void CheckButtonPress()
 
 void CheckForSerialProgram()
 {
-  if(Serial.available())
+  if(Serial1.available())
   {
     int recieved;
-    while(Serial.available())
+    while(Serial1.available())
     { 
-       recieved = Serial.read();
+       recieved = Serial1.read();
        recieved -=48;
        Serial.print("SerialRecieved ");Serial.println(recieved);
     }
