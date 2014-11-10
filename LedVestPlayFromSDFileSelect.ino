@@ -1,17 +1,24 @@
+
 #include <Adafruit_NeoPixel.h>
+
 #include <SD.h>
 //Git Checkin
+//Written for Teensy 3
+
+
+long frameTime = 0;
 
 const int DATAPIN = 6;
-const int LEDCOUNT = 470;
+int LEDCOUNT = 1;
 const int BUTTON_PIN = 8;
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATAPIN, NEO_GRB + NEO_KHZ400);
+
+//Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATAPIN, NEO_GRB + NEO_KHZ400);
 
 //SD Card Control
 File myFile;
-const int chipSelect = 20;
-int fileToPlay = 1;
-boolean newProgram = false;
+const int chipSelect = 20; //pin for DS comms
+int fileToPlay = 1; //start with first file
+boolean newProgram = false; //Indicates if the next animation should be loaded. Set by button press
 
 //SD Card Info
 Sd2Card card;
@@ -20,45 +27,61 @@ SdFile root;
 
 void setup()
 {
-  Serial.begin(115200);
-  strip.begin();
+  Serial.begin(115200); //for outputting text for debugging
+  Serial1.begin(38400); //for communicating program to other controllers
+  //serial 1 = RX=0 TX=1
+  
+  //strip.begin();
   
   InitializePins();
   DiplayCardInfo();
   InitializeSD();
-  
 }
 
 void loop()
 {
-  PlayDataToVest(5);
-  
+  PlayDataToVest();
 }
 
-void PlayDataToVest(int wait)
+
+
+void PlayDataToVest()
 {
-  int frames = 0;
-  long startTime = millis();
+  //first, load up the led count from file. 
+  //Dependancy is that all files on the card are for the same LED array. 
   OpenFile();
+  LEDCOUNT = (int)myFile.read();
+  Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATAPIN, NEO_GRB + NEO_KHZ400);
+  myFile.close(); 
   
-  while(myFile.available() && !newProgram) //untill there is no more data
+  while(true)//replaces loop so that the led driver library can be maintained
   {
-    CheckButtonPress();
+    long startTime = millis();
+    OpenFile();
     
-    for(int i = 0; i<LEDCOUNT; i++)//itterate each led
+    //dispose the first header byte that contains the LED count
+    myFile.read();
+    
+    while(myFile.available() && !newProgram) //untill there is no more data
     {
-      strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
+      frameTime = millis();
+      CheckButtonPress();
+      
+      for(int i = 0; i<LEDCOUNT; i++)//itterate each led
+      {
+        strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
+      }
+      
+      strip.show();
+     CheckForNewSerialProgram();
+      delay(40 - (millis() - frameTime ));
+      //frames++;
     }
     
-    strip.show();
-    FlashLed();
-    delay(wait);
-    frames++;
+    myFile.close();  
+    //Serial.println( frames );
+    //Serial.println( millis() - startTime);
   }
-  
-  myFile.close();
-  Serial.println( frames );
-  Serial.println( millis() - startTime);
 }
 
 void OpenFile()
@@ -105,16 +128,17 @@ void OpenFile()
     myFile = SD.open("10.led");
     Serial.println("Playing file 10");
     break;
-      case 11:
+  case 11:
     myFile = SD.open("11.led");
     Serial.println("Playing file 11");
     break;
-      case 12:
+  case 12:
     myFile = SD.open("12.led");
     Serial.println("Playing file 12");
     break;
   }
   newProgram = false;//we have a new program loaded now
+  
 }
 
 
@@ -217,7 +241,7 @@ void InitializePins()
   pinMode(13, OUTPUT);
   digitalWrite(13, LOW);
   
-    pinMode(BUTTON_PIN, INPUT); //button
+  pinMode(BUTTON_PIN, INPUT); //button
   digitalWrite(BUTTON_PIN, HIGH);
 }
 
@@ -244,7 +268,30 @@ void CheckButtonPress()
       {
         fileToPlay++;
       }
-      while(digitalRead(BUTTON_PIN) == LOW) {;}//wait for let go of button
+      //wait for let go of button
+      while(digitalRead(BUTTON_PIN) == LOW) {;}
+      delay(1);//debounce
+      //Broadcast the new pattern.
+      Serial1.print(fileToPlay);//send the change to the serial comms
     }
+  }
+}
+
+void CheckForNewSerialProgram()
+{
+  byte incomingByte;
+  while (Serial1.available() > 0) 
+  { 
+    digitalWrite(13, HIGH); //flash to show recieved byte
+    incomingByte = Serial1.read();
+    digitalWrite(13, LOW); //reset LED
+  }
+  
+  //is numeric and different to what is currently playing
+  if(incomingByte >= 1 && incomingByte <= 12 && incomingByte != fileToPlay)
+  {
+    Serial1.print(incomingByte);//send the change to the serial comms
+    fileToPlay = incomingByte;
+    newProgram = true;
   }
 }
