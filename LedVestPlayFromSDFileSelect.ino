@@ -20,10 +20,6 @@ SdFile root;
 
 void setup()
 {
-<<<<<<< HEAD
-=======
-  delay(2000); //dev catch startup info 
->>>>>>> parent of 635d737... Working OK.
   Serial.begin(115200);
   strip.begin();
   
