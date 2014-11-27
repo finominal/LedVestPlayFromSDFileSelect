@@ -1,5 +1,6 @@
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 #include <Adafruit_NeoPixel.h>
 
 #include <SD.h>
@@ -25,6 +26,12 @@ boolean newProgram = false; //Indicates if the next animation should be loaded. 
 #include "FastLED.h"
 #include <SD.h>
 
+=======
+//#include <Adafruit_NeoPixel.h>
+#include "FastLED.h"
+#include <SD.h>
+
+>>>>>>> FETCH_HEAD
 //File entry =  dir.openNextFile();
 
 const int DATA_PIN = 6;
@@ -40,6 +47,9 @@ boolean newProgram = false;
 int requestedProgram = 0;
 int countFiles = 0;
 int currentProgram;
+<<<<<<< HEAD
+>>>>>>> FETCH_HEAD
+=======
 >>>>>>> FETCH_HEAD
 
 //SD Card Info
@@ -49,6 +59,7 @@ SdFile root;
 
 void setup()
 {
+<<<<<<< HEAD
 <<<<<<< HEAD
   Serial.begin(115200); //for outputting text for debugging
   Serial1.begin(38400); //for communicating program to other controllers
@@ -60,13 +71,24 @@ void setup()
   Serial.begin(115200);
   Serial1.begin(9600);
 >>>>>>> FETCH_HEAD
+=======
+  //delay(2000); //dev catch startup info 
+  Serial.begin(115200);
+  Serial1.begin(9600);
+>>>>>>> FETCH_HEAD
   
   Serial.println("*Starting*");
 
   InitializePins();
 <<<<<<< HEAD
+<<<<<<< HEAD
   DiplayCardInfo();
   InitializeSD();
+=======
+  InitializeSD(); // will also display card info
+  GetNextFile();  // get the first file
+  GetLedCount(); //get the led count from the file header, two bytes combined.
+>>>>>>> FETCH_HEAD
 =======
   InitializeSD(); // will also display card info
   GetNextFile();  // get the first file
@@ -77,6 +99,7 @@ void setup()
 void loop()
 {
   PlayDataToVest();
+<<<<<<< HEAD
 <<<<<<< HEAD
 }
 
@@ -191,12 +214,85 @@ void PlayDataToVest()
 >>>>>>> FETCH_HEAD
 }
 
+=======
+}
+
+void GetLedCount()
+{
+  LEDCOUNT = myFile.read();
+  LEDCOUNT<<=8;
+  LEDCOUNT |= myFile.read(); 
+  Serial.print("LED COUNT = "); Serial.println(LEDCOUNT);
+  myFile.seek(0); //redet the file to start.
+}
+
+void PlayDataToVest()
+{
+  CRGB leds[LEDCOUNT];
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, LEDCOUNT);
+  
+  //Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATA_PIN, NEO_GRB + NEO_KHZ400);
+  //strip.begin();
+  
+  while(true)//replaces loop so led array size can be sized dynamically from file
+  {
+    if(newProgram)
+    {
+      if(requestedProgram > 0)
+      {
+        LoadRequestedProgram();
+      }
+      else
+      {
+        GetNextFile();
+      }
+      newProgram = !newProgram;
+      requestedProgram = 0;
+    }
+    
+    long startTime = millis(); //used to set frame rate wait times
+    long loopTime;
+    
+    //dispose of the header (first two bytes) 
+    Serial.print("Playing File: "); Serial.println(myFile.name()); 
+    myFile.read();
+    myFile.read();
+  
+    while(myFile.available() && !newProgram) //untill there is no more data
+    {
+      CheckButtonPress();
+      CheckForSerialProgram();
+  
+      for(int i = 0; i<LEDCOUNT; i++)//itterate each led
+      {
+      //  strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
+        leds[i] = GetOneLedDataFromFile(myFile);
+      }
+    
+    //strip.show();
+    FastLED.show();
+    
+    loopTime = (millis() - startTime);
+    //Serial.println(loopTime); //show the loop time in ms
+    if(loopTime < 40)
+    {
+      delay(40 - loopTime); //40 ms in 25 fps
+    }
+    startTime = millis();
+  }
+  
+  myFile.seek(0); //reset the file
+  }
+}
+
+>>>>>>> FETCH_HEAD
 void GetNextFile()
 { 
   myFile =  cardRoot.openNextFile();
 
   if (!myFile) 
   {
+<<<<<<< HEAD
 <<<<<<< HEAD
   case 1:
     myFile = SD.open("01.led");
@@ -254,10 +350,19 @@ void GetNextFile()
     myFile =  cardRoot.openNextFile();
     currentProgram=0;
   }
+=======
+    cardRoot.rewindDirectory();
+    myFile =  cardRoot.openNextFile();
+    currentProgram=0;
+  }
+>>>>>>> FETCH_HEAD
    currentProgram++; //keep track of the program to send to other controllers. 
   
    Serial.print("Opened File:");Serial.println(myFile.name());
    Serial1.print(currentProgram);//send the programChange to the other controllers. 
+<<<<<<< HEAD
+>>>>>>> FETCH_HEAD
+=======
 >>>>>>> FETCH_HEAD
 }
 
@@ -432,6 +537,7 @@ void CheckButtonPress()
     {
       newProgram = true;
 <<<<<<< HEAD
+<<<<<<< HEAD
       if(fileToPlay == 12)
       { 
          fileToPlay = 1; 
@@ -446,6 +552,8 @@ void CheckButtonPress()
       //Broadcast the new pattern.
       Serial1.print(fileToPlay);//send the change to the serial comms
 =======
+=======
+>>>>>>> FETCH_HEAD
       
       while(digitalRead(BUTTON_PIN) == LOW) {;}//wait for let go of button
 >>>>>>> FETCH_HEAD
@@ -453,6 +561,7 @@ void CheckButtonPress()
   }
 }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 void CheckForNewSerialProgram()
 {
@@ -473,6 +582,8 @@ void CheckForNewSerialProgram()
   }
 }
 =======
+=======
+>>>>>>> FETCH_HEAD
 void CheckForSerialProgram()
 {
   if(Serial1.available())
@@ -494,4 +605,7 @@ void CheckForSerialProgram()
   }
 }
 
+<<<<<<< HEAD
+>>>>>>> FETCH_HEAD
+=======
 >>>>>>> FETCH_HEAD
