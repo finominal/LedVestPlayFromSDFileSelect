@@ -1,17 +1,23 @@
-#include <Adafruit_NeoPixel.h>
-#include <SD.h>
-//Git Checkin
 
-const int DATAPIN = 6;
-const int LEDCOUNT = 470;
+//#include <Adafruit_NeoPixel.h>
+#include "FastLED.h"
+#include <SD.h>
+
+//File entry =  dir.openNextFile();
+
+const int DATA_PIN = 6;
+uint16_t  LEDCOUNT = 0;
 const int BUTTON_PIN = 8;
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATAPIN, NEO_GRB + NEO_KHZ400);
 
 //SD Card Control
 File myFile;
+File cardRoot;
+
 const int chipSelect = 20;
-int fileToPlay = 1;
 boolean newProgram = false;
+int requestedProgram = 0;
+int countFiles = 0;
+int currentProgram;
 
 //SD Card Info
 Sd2Card card;
@@ -20,103 +26,119 @@ SdFile root;
 
 void setup()
 {
+  //delay(2000); //dev catch startup info 
   Serial.begin(115200);
-  strip.begin();
+  Serial1.begin(9600);
   
+  Serial.println("*Starting*");
+
   InitializePins();
-  DiplayCardInfo();
-  InitializeSD();
-  
+  InitializeSD(); // will also display card info
+  GetNextFile();  // get the first file
+  GetLedCount(); //get the led count from the file header, two bytes combined.
 }
 
 void loop()
 {
-  PlayDataToVest(5);
-  
+  PlayDataToVest();
 }
 
-void PlayDataToVest(int wait)
+void GetLedCount()
 {
-  int frames = 0;
-  long startTime = millis();
-  OpenFile();
+  LEDCOUNT = myFile.read();
+  LEDCOUNT<<=8;
+  LEDCOUNT |= myFile.read(); 
+  Serial.print("LED COUNT = "); Serial.println(LEDCOUNT);
+  myFile.seek(0); //redet the file to start.
+}
+
+void PlayDataToVest()
+{
+  CRGB leds[LEDCOUNT];
+  FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, LEDCOUNT);
   
-  while(myFile.available() && !newProgram) //untill there is no more data
+  //Adafruit_NeoPixel strip = Adafruit_NeoPixel(LEDCOUNT, DATA_PIN, NEO_GRB + NEO_KHZ400);
+  //strip.begin();
+  
+  while(true)//replaces loop so led array size can be sized dynamically from file
   {
-    CheckButtonPress();
-    
-    for(int i = 0; i<LEDCOUNT; i++)//itterate each led
+    if(newProgram)
     {
-      strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
+      if(requestedProgram > 0)
+      {
+        LoadRequestedProgram();
+      }
+      else
+      {
+        GetNextFile();
+      }
+      newProgram = !newProgram;
+      requestedProgram = 0;
     }
     
-    strip.show();
-    FlashLed();
-    delay(wait);
-    frames++;
+    long startTime = millis(); //used to set frame rate wait times
+    long loopTime;
+    
+    //dispose of the header (first two bytes) 
+    Serial.print("Playing File: "); Serial.println(myFile.name()); 
+    myFile.read();
+    myFile.read();
+  
+    while(myFile.available() && !newProgram) //untill there is no more data
+    {
+      CheckButtonPress();
+      CheckForSerialProgram();
+  
+      for(int i = 0; i<LEDCOUNT; i++)//itterate each led
+      {
+      //  strip.setPixelColor(i,GetOneLedDataFromFile(myFile));
+        leds[i] = GetOneLedDataFromFile(myFile);
+      }
+    
+    //strip.show();
+    FastLED.show();
+    
+    loopTime = (millis() - startTime);
+    //Serial.println(loopTime); //show the loop time in ms
+    if(loopTime < 40)
+    {
+      delay(40 - loopTime); //40 ms in 25 fps
+    }
+    startTime = millis();
   }
   
-  myFile.close();
-  Serial.println( frames );
-  Serial.println( millis() - startTime);
-}
-
-void OpenFile()
-{
-  switch(fileToPlay)
-  {
-  case 1:
-    myFile = SD.open("01.led");
-    Serial.println("Playing file 01");
-    break;
-  case 2:
-    myFile = SD.open("02.led");
-    Serial.println("Playing file 02");
-    break;
-  case 3:
-    myFile = SD.open("03.led");
-    Serial.println("Playing file 03");
-    break;  
-  case 4:
-    myFile = SD.open("04.led");
-    Serial.println("Playing file 04");
-    break;
-  case 5:
-    myFile = SD.open("05.led");
-    Serial.println("Playing file 05");
-    break;
-  case 6:
-    myFile = SD.open("06.led");
-    Serial.println("Playing file 06");
-    break;
-  case 7:
-    myFile = SD.open("07.led");
-    Serial.println("Playing file 07");
-    break;
-  case 8:
-    myFile = SD.open("08.led");
-    Serial.println("Playing file 08");
-    break;
-  case 9:
-    myFile = SD.open("09.led");
-    Serial.println("Playing file 09");
-    break;
-  case 10:
-    myFile = SD.open("10.led");
-    Serial.println("Playing file 10");
-    break;
-      case 11:
-    myFile = SD.open("11.led");
-    Serial.println("Playing file 11");
-    break;
-      case 12:
-    myFile = SD.open("12.led");
-    Serial.println("Playing file 12");
-    break;
+  myFile.seek(0); //reset the file
   }
-  newProgram = false;//we have a new program loaded now
 }
 
+void GetNextFile()
+{ 
+  myFile =  cardRoot.openNextFile();
+
+  if (!myFile) 
+  {
+    cardRoot.rewindDirectory();
+    myFile =  cardRoot.openNextFile();
+    currentProgram=0;
+  }
+   currentProgram++; //keep track of the program to send to other controllers. 
+  
+   Serial.print("Opened File:");Serial.println(myFile.name());
+   Serial1.print(currentProgram);//send the programChange to the other controllers. 
+}
+
+void LoadRequestedProgram()
+{
+ //Serial.print("requestedProgram="); Serial.println(requestedProgram);
+  currentProgram = 0;
+  cardRoot.rewindDirectory();
+  for(int i = 0; i<requestedProgram; i++)
+  {
+    myFile =  cardRoot.openNextFile();
+    currentProgram++;
+  }
+  Serial.print("Opened File:");Serial.println(myFile.name());
+}
 
 void InitializeSD()
 {
@@ -128,7 +150,30 @@ void InitializeSD()
     return;
   }
   
-  Serial.println("SD Initialization OK.");
+  Serial.println("SD Initialization Started.");
+  
+  cardRoot = SD.open("/");
+  
+  DiplayCardInfo();
+  
+  //count files
+  cardRoot.rewindDirectory();
+  while(true)
+  {
+     myFile =  cardRoot.openNextFile();
+     if (! myFile) 
+     {
+       cardRoot.rewindDirectory();
+       Serial.print("Counted Files: "); Serial.println(countFiles);
+       break;
+     }
+     else 
+     {
+       countFiles++;
+     }
+  }
+ 
+  Serial.println("SD INITILIAZED OK");
 }
 
 uint32_t GetOneLedDataFromFile(File file)//gets 24 bits, return as 32
@@ -142,12 +187,38 @@ uint32_t GetOneLedDataFromFile(File file)//gets 24 bits, return as 32
   return result;
 }
 
+void printDirectory(File dir, int numTabs) {
+   int l = 0;
+  while(true)
+  {
+     myFile =  dir.openNextFile();
+     if (! myFile) {
+       // no more files
+       Serial.println("**nomorefiles**");
+       l=1;
+       break;
+     }
+     for (uint8_t i=0; i<numTabs; i++) {
+       Serial.print('\t');
+     }
+     Serial.print(myFile.name());
+     if (myFile.isDirectory()) {
+       Serial.println("/");
+       printDirectory(myFile, numTabs+1);
+     } else {
+       // files have sizes, directories do not
+       Serial.print("\t\t");
+       Serial.println(myFile.size(), DEC);
+     }
+     myFile.close();
+  }
+}
+
 void DiplayCardInfo()
 {
-
-  // we'll use the initialization code from the utility libraries
-  // since we're just testing if the card is working!
-  if (!card.init(SPI_HALF_SPEED, chipSelect)) {
+  //half speed didnt work so well with teensy 3.1
+  //might be able to get the frame rate up higher on Arduino on Full Speed?
+  if (!card.init(SPI_QUARTER_SPEED, chipSelect)) {
     Serial.println("initialization failed. Things to check:");
     Serial.println("* is a card is inserted?");
     Serial.println("* Is your wiring correct?");
@@ -211,24 +282,14 @@ void DiplayCardInfo()
 
 void InitializePins()
 {
-  pinMode(53, OUTPUT);  //to talk to the SD card, 10 on UNO, 53 on mega
+  pinMode(20, OUTPUT);  //to talk to the SD card, 10 on UNO, 53 on mega
   
-  //led light indicator
-  pinMode(13, OUTPUT);
-  digitalWrite(13, LOW);
-  
-    pinMode(BUTTON_PIN, INPUT); //button
+  pinMode(BUTTON_PIN, INPUT); //button
   digitalWrite(BUTTON_PIN, HIGH);
 }
 
-void FlashLed()
-{
-      digitalWrite(13, HIGH);
-      delay(1);
-      digitalWrite(13, LOW);
-}
-
 void CheckButtonPress()
+
 {
   if(digitalRead(BUTTON_PIN) == LOW)
   {
@@ -236,15 +297,30 @@ void CheckButtonPress()
     if(digitalRead(BUTTON_PIN) == LOW)
     {
       newProgram = true;
-      if(fileToPlay == 12)
-      { 
-         fileToPlay = 1; 
-      }
-      else 
-      {
-        fileToPlay++;
-      }
+      
       while(digitalRead(BUTTON_PIN) == LOW) {;}//wait for let go of button
     }
   }
 }
+
+void CheckForSerialProgram()
+{
+  if(Serial1.available())
+  {
+    int recieved;
+    while(Serial1.available())
+    { 
+       recieved = Serial1.read();
+       recieved -=48;
+       Serial.print("SerialRecieved ");Serial.println(recieved);
+    }
+    
+    if(recieved > 0 && recieved <= countFiles)
+    {
+      requestedProgram = recieved;
+      Serial1.print(requestedProgram);//send on 
+      newProgram = true;
+    }
+  }
+}
+
