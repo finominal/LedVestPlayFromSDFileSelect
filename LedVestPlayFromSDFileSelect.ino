@@ -26,7 +26,7 @@ SdFile root;
 
 void setup()
 {
-  delay(2000); //dev catch startup info 
+  //delay(2000); //dev catch startup info 
   Serial.begin(115200);
   Serial1.begin(9600);
   
