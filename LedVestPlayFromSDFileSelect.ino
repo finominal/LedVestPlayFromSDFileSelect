@@ -1,3 +1,13 @@
+/*
+The circuit:
+  * SD card attached to SPI bus as follows:
+ ** MOSI - pin 11 on Arduino Uno/Duemilanove/Diecimila
+ ** MISO - pin 12 on Arduino Uno/Duemilanove/Diecimila
+ ** CLK - pin 13 on Arduino Uno/Duemilanove/Diecimila
+ ** CS - depends on your SD card shield or module. 
+*/
+
+
 
 //#include <Adafruit_NeoPixel.h>
 #include "FastLED.h"
@@ -5,15 +15,15 @@
 
 //File entry =  dir.openNextFile();
 
-const int DATA_PIN = 6;
+const int DATA_PIN = 14;
 uint16_t  LEDCOUNT = 0;
-const int BUTTON_PIN = 8;
+const int BUTTON_PIN = 17;
 
 //SD Card Control
 File myFile;
 File cardRoot;
 
-const int chipSelect = 20;
+const int chipSelect = 10;
 boolean newProgram = false;
 int requestedProgram = 0;
 int countFiles = 0;
@@ -26,7 +36,7 @@ SdFile root;
 
 void setup()
 {
-  //delay(2000); //dev catch startup info 
+  delay(2000); //dev catch startup info 
   Serial.begin(115200);
   Serial1.begin(9600);
   
