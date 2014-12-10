@@ -5,9 +5,12 @@ The circuit:
  ** MISO - pin 12 on Arduino Uno/Duemilanove/Diecimila
  ** CLK - pin 13 on Arduino Uno/Duemilanove/Diecimila
  ** CS - depends on your SD card shield or module. 
-*/
-
-
+ 
+ CHANGELOG:
+ Changed the data pin for Octows2811 adaptor. Blue pair Left.
+ Button on pin 17. 
+ 
+ */
 
 //#include <Adafruit_NeoPixel.h>
 #include "FastLED.h"
@@ -110,9 +113,9 @@ void PlayDataToVest()
     
     loopTime = (millis() - startTime);
     //Serial.println(loopTime); //show the loop time in ms
-    if(loopTime < 40)
+    if(loopTime < 33)
     {
-      delay(40 - loopTime); //40 ms in 25 fps
+      delay(33 - loopTime); //40 ms in 25 fps
     }
     startTime = millis();
   }
