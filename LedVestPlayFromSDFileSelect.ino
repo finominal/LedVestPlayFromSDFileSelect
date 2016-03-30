@@ -16,11 +16,15 @@ The circuit:
 #include "FastLED.h"
 #include <SD.h>
 
+
+
 //File entry =  dir.openNextFile();
 
 const int DATA_PIN = 14;
 uint16_t  LEDCOUNT = 0;
 const int BUTTON_PIN = 17;
+const int REMOTE_PIN = 18;
+bool AUTOMODE = false;
 
 //SD Card Control
 File myFile;
@@ -41,20 +45,28 @@ void setup()
 {
   delay(2000); //dev catch startup info 
   Serial.begin(115200);
-  Serial1.begin(9600);
+  //Serial1.begin(9600);
   
   Serial.println("*Starting*");
 
   InitializePins();
+ 
+  
+  CheckForAutoModeOnStart();
+   
   InitializeSD(); // will also display card info
   GetNextFile();  // get the first file
   GetLedCount(); //get the led count from the file header, two bytes combined.
+
+ 
 }
 
 void loop()
 {
   PlayDataToVest();
 }
+
+
 
 void GetLedCount()
 {
@@ -101,6 +113,7 @@ void PlayDataToVest()
     {
       CheckButtonPress();
       CheckForSerialProgram();
+      CheckAutoMode();
   
       for(int i = 0; i<LEDCOUNT; i++)//itterate each led
       {
@@ -137,7 +150,7 @@ void GetNextFile()
    currentProgram++; //keep track of the program to send to other controllers. 
   
    Serial.print("Opened File:");Serial.println(myFile.name());
-   Serial1.print(currentProgram);//send the programChange to the other controllers. 
+   //Serial1.print(currentProgram);//send the programChange to the other controllers. 
 }
 
 void LoadRequestedProgram()
@@ -201,14 +214,14 @@ uint32_t GetOneLedDataFromFile(File file)//gets 24 bits, return as 32
 }
 
 void printDirectory(File dir, int numTabs) {
-   int l = 0;
+
   while(true)
   {
      myFile =  dir.openNextFile();
      if (! myFile) {
        // no more files
        Serial.println("**nomorefiles**");
-       l=1;
+     
        break;
      }
      for (uint8_t i=0; i<numTabs; i++) {
@@ -299,31 +312,36 @@ void InitializePins()
   
   pinMode(BUTTON_PIN, INPUT); //button
   digitalWrite(BUTTON_PIN, HIGH);
+
+  pinMode(REMOTE_PIN, INPUT); //button
+  digitalWrite(REMOTE_PIN, LOW);
+
+  delay(20);
 }
 
 void CheckButtonPress()
 
 {
-  if(digitalRead(BUTTON_PIN) == LOW)
+  if(digitalRead(BUTTON_PIN) == LOW || digitalRead(REMOTE_PIN) == HIGH)
   {
     delay(5);//debounce
-    if(digitalRead(BUTTON_PIN) == LOW)
+    if(digitalRead(BUTTON_PIN) == LOW || digitalRead(REMOTE_PIN) == HIGH)
     {
       newProgram = true;
-      
-      while(digitalRead(BUTTON_PIN) == LOW) {;}//wait for let go of button
+      AUTOMODE = false; //override the auto mode by a button press
+      while(digitalRead(BUTTON_PIN) == LOW || digitalRead(REMOTE_PIN) == HIGH) {;}//wait for let go of button
     }
   }
 }
 
 void CheckForSerialProgram()
 {
-  if(Serial1.available())
+  if(Serial.available())
   {
     int recieved;
-    while(Serial1.available())
+    while(Serial.available())
     { 
-       recieved = Serial1.read();
+       recieved = Serial.read();
        recieved -=48;
        Serial.print("SerialRecieved ");Serial.println(recieved);
     }
@@ -331,7 +349,7 @@ void CheckForSerialProgram()
     if(recieved > 0 && recieved <= countFiles)
     {
       requestedProgram = recieved;
-      Serial1.print(requestedProgram);//send on 
+      Serial.print(requestedProgram);//send on 
       newProgram = true;
     }
   }
