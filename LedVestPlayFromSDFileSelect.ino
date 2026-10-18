@@ -137,20 +137,39 @@ void PlayDataToVest()
   }
 }
 
+// true if name ends in ".led" (case-insensitive; 8.3 names come back as ".LED")
+bool HasLedExtension(const char* name)
+{
+  size_t len = strlen(name);
+  return len > 4 && strcasecmp(name + len - 4, ".led") == 0;
+}
+
+
 void GetNextFile()
 { 
-  myFile =  cardRoot.openNextFile();
 
-  if (!myFile) 
+  while (true)
   {
-    cardRoot.rewindDirectory();
     myFile =  cardRoot.openNextFile();
-    currentProgram=0;
+    
+    if (!myFile)                      // end of directory
+    {
+      cardRoot.rewindDirectory();
+      myFile = cardRoot.openNextFile();
+      currentProgram = 0;
+      continue;
+    }
+
+    if (!myFile.isDirectory() && HasLedExtension(myFile.name()))
+      break;                          // found one
+
+    myFile.close();                   // not a .led file: release it and keep looking
   }
-   currentProgram++; //keep track of the program to send to other controllers. 
+
+  currentProgram++; //keep track of the program to send to other controllers. 
   
-   Serial.print("Opened File:");Serial.println(myFile.name());
-   //Serial1.print(currentProgram);//send the programChange to the other controllers. 
+  Serial.print("Opened File:");Serial.println(myFile.name());
+  //Serial1.print(currentProgram);//send the programChange to the other controllers. 
 }
 
 void LoadRequestedProgram()
@@ -354,4 +373,3 @@ void CheckForSerialProgram()
     }
   }
 }
-
